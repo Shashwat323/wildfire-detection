@@ -41,7 +41,7 @@ def test_api():
             print("Success!")
             data = response.json()
             print(f"UUID: {data['uuid']}")
-            print(f"Annotated image (first 50 chars): {data['annotated_image'][:50]}...")
+            print(f"Annotated image: {data['annotated_image']}...")
 
             with open("annotated_test.jpg", "wb") as f:
                 f.write(base64.b64decode(data['annotated_image']))
