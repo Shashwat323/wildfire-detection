@@ -7,7 +7,6 @@ def test_api():
     url_predict = "http://127.0.0.1:8000/api/predict"
     url_annotate = "http://127.0.0.1:8000/api/annotate"
     
-    # Path to a sample image from the demo-images folder
     sample_image_path = "demo-images/image0.jpeg"
     
     if not os.path.exists(sample_image_path):
@@ -21,7 +20,6 @@ def test_api():
         "uuid": "e4b2c1d0-8d2e-11eb-8dcd-0242ac130003",
         "image": encoded_string
     }
-    print(payload)
     print("--- Testing /api/predict ---")
     try:
         response = requests.post(url_predict, json=payload)
@@ -41,7 +39,7 @@ def test_api():
             print("Success!")
             data = response.json()
             print(f"UUID: {data['uuid']}")
-            print(f"Annotated image: {data['annotated_image']}...")
+            print(f"Annotated image: {data['annotated_image']}")
 
             with open("annotated_test.jpg", "wb") as f:
                 f.write(base64.b64decode(data['annotated_image']))
