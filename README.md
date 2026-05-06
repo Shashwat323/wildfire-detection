@@ -1,6 +1,7 @@
 Made for use with Google Cloud Platform.
 
 Need an existing bucket and add the following files:
+fire-models/fire_m.pt
 main.py
 requirements.txt
 Dockerfile
