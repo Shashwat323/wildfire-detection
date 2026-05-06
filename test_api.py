@@ -42,11 +42,10 @@ def test_api():
             data = response.json()
             print(f"UUID: {data['uuid']}")
             print(f"Annotated image (first 50 chars): {data['annotated_image'][:50]}...")
-            
-            # Optionally save the annotated image to verify
-            # with open("annotated_test.jpg", "wb") as f:
-            #     f.write(base64.b64decode(data['annotated_image']))
-            # print("Saved annotated image to annotated_test.jpg")
+
+            with open("annotated_test.jpg", "wb") as f:
+                f.write(base64.b64decode(data['annotated_image']))
+            print("Saved annotated image to annotated_test.jpg")
         else:
             print(f"Failed with status code: {response.status_code}")
             print(response.text)

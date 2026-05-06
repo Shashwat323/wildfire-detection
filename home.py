@@ -146,7 +146,7 @@ def main():
     model_files = [f.replace(".pt", "") for f in os.listdir(models_dir) if f.endswith(".pt")]
     
     with col2:
-        selected_model = st.selectbox("Select Model Size", sorted(model_files), index=2)
+        selected_model = st.selectbox("Select Model Size", sorted(model_files), index=0)
 
     # Model and general info
     col1, col2 = st.columns(2)

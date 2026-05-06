@@ -1,29 +1,21 @@
 import base64
-import io
-import uuid
 from typing import List
-
+import uvicorn
 import cv2
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from ultralytics import YOLO
-from PIL import Image
 
-# Initialize FastAPI app
-app = FastAPI(title="Wildfire Detection API")
+api = FastAPI(title="Wildfire Detection API")
 
-# Load YOLO model
-# Using fire-models/fire_m.pt as identified in the research phase
 MODEL_PATH = "fire-models/fire_m.pt"
 model = YOLO(MODEL_PATH)
 
-# Request Schema
 class InferenceRequest(BaseModel):
-    uuid: str = Field(..., description="Unique identifier for the request")
-    image: str = Field(..., description="Base64 encoded image string")
+    uuid: str
+    image: str
 
-# Response Schema for /api/predict
 class DetectionBox(BaseModel):
     x: float
     y: float
@@ -40,14 +32,12 @@ class PredictionResponse(BaseModel):
     speed_inference_ms: float
     speed_postprocess_ms: float
 
-# Response Schema for /api/annotate
 class AnnotationResponse(BaseModel):
     uuid: str
-    annotated_image: str  # Base64 encoded
+    annotated_image: str
 
 def decode_image(base64_string: str) -> np.ndarray:
     try:
-        # Remove metadata prefix if present (e.g., "data:image/jpeg;base64,")
         if "," in base64_string:
             base64_string = base64_string.split(",")[1]
         
@@ -65,44 +55,26 @@ def encode_image(image: np.ndarray) -> str:
     base64_string = base64.b64encode(buffer).decode('utf-8')
     return base64_string
 
-@app.post("/api/predict", response_model=PredictionResponse)
+@api.post("/api/predict", response_model=PredictionResponse)
 def predict(request: InferenceRequest):
-    """
-    Perform object detection and return structured JSON results.
-    Note: Using 'def' instead of 'async def' allows FastAPI to run this blocking 
-    ML task in a separate thread pool, preventing it from blocking the event loop.
-    """
     image = decode_image(request.image)
-    
-    # Perform inference
-    results = model.predict(image, device='cpu')  # device='cpu' for safety in restricted envs
+    results = model.predict(image, device='cpu')
     result = results[0]
     
     detections = []
     boxes = []
     
-    # Extract results
-    names = result.names
     for box in result.boxes:
-        cls_id = int(box.cls[0])
-        label = names[cls_id]
-        conf = float(box.conf[0])
-        
-        # Get coordinates (xywh)
-        # Note: box.xywh returns [x_center, y_center, width, height]
-        # Request format usually expects x, y as top-left or specified. 
-        # Here we provide center-based or convert to top-left if standard.
-        # Ultralytics xywh is [x_center, y_center, width, height]
-        # Let's provide top-left (x, y) as it's more common for "x, y, width, height"
-        xyxy = box.xyxy[0].tolist()
-        x1, y1, x2, y2 = xyxy
+        label = result.names[int(box.cls)]
+        xywh = box.xywh[0].tolist()
+        conf = float(box.conf)
         
         detections.append(label)
         boxes.append(DetectionBox(
-            x=x1,
-            y=y1,
-            width=x2 - x1,
-            height=y2 - y1,
+            x=xywh[0],
+            y=xywh[1],
+            width=xywh[2],
+            height=xywh[3],
             probability=conf
         ))
     
@@ -116,21 +88,14 @@ def predict(request: InferenceRequest):
         speed_postprocess_ms=result.speed['postprocess']
     )
 
-@app.post("/api/annotate", response_model=AnnotationResponse)
+@api.post("/api/annotate", response_model=AnnotationResponse)
 def annotate(request: InferenceRequest):
-    """
-    Perform object detection and return the annotated image as base64.
-    """
     image = decode_image(request.image)
-    
-    # Perform inference
     results = model.predict(image, device='cpu')
     result = results[0]
     
-    # Use Ultralytics plotting utility
     annotated_frame = result.plot()
     
-    # Encode back to base64
     base64_annotated = encode_image(annotated_frame)
     
     return AnnotationResponse(
@@ -139,5 +104,4 @@ def annotate(request: InferenceRequest):
     )
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(api, host="0.0.0.0", port=8000)
