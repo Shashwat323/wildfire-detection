@@ -4,7 +4,6 @@ provider "google" {
   zone    = var.zone
 }
 
-# Variable for Project ID
 variable "project_id" {
   description = "The GCP project ID"
   type        = string
@@ -21,26 +20,22 @@ variable "zone" {
   default = "us-central1-a"
 }
 
-# Define the existing bucket name as a variable for easy management
 variable "bucket" {
   type    = string
   default = "wildfire-detection"
 }
 
-# 1. Service Account for the VM
 resource "google_service_account" "vm_sa" {
   account_id   = "wildfire-deploy-sa"
   display_name = "Service Account for Wildfire VM"
 }
 
-# 2. IAM Policy: Allow the VM to read from the EXISTING bucket
 resource "google_project_iam_member" "bucket_reader" {
   project = var.project_id
   role    = "roles/storage.objectViewer"
   member  = "serviceAccount:${google_service_account.vm_sa.email}"
 }
 
-# 3. Firewall Rule (Port 8000)
 resource "google_compute_firewall" "allow_http_8000" {
   name    = "allow-http-8000"
   network = "default"
@@ -54,7 +49,6 @@ resource "google_compute_firewall" "allow_http_8000" {
   target_tags   = ["wildfire-app"]
 }
 
-# 4. Compute Instance
 resource "google_compute_instance" "app_server" {
   name         = "wildfire-app-server"
   machine_type = "e2-highcpu-8"
@@ -78,12 +72,10 @@ resource "google_compute_instance" "app_server" {
   }
 
   metadata_startup_script = <<-EOT
-    #!/bin/bash
     set -ex
 
-    # Wait for apt lock to be released
     while fuser /var/lib/dpkg/lock >/dev/null 2>&1 ; do
-      echo "Waiting for other software managers to finish..."
+      echo "Waiting for package manager to finish..."
       sleep 5
     done
 
@@ -93,10 +85,7 @@ resource "google_compute_instance" "app_server" {
     mkdir -p /app
     cd /app
 
-    # Try gcloud storage first, fallback to gsutil if needed
-    if ! gcloud storage cp -r gs://${var.bucket}/* . ; then
-      gsutil -m cp -r gs://${var.bucket}/* .
-    fi
+    gcloud storage cp -r gs://${var.bucket}/* .
 
     docker build -t wildfire-app .
     docker run -d --name wildfire-api -p 8000:8000 wildfire-app

@@ -1,10 +1,10 @@
-terraform apply -var="project_id=YOUR_PROJECT_ID"
+Made for use with Google Cloud Platform.
 
-gcloud compute scp --recurse main.py Dockerfile requirements.txt fire-models/ wildfire-app-simple:~/ --zone us-central1-a
+Need an existing bucket and add the following files:
+main.py
+requirements.txt
+Dockerfile
 
-# SSH into the VM
-gcloud compute ssh wildfire-app-simple --zone us-central1-a
-
-
-sudo docker build -t wildfire-app .
-sudo docker run -d -p 8000:8000 wildfire-app
+Navigate to the terraform/ directory and run the following commands:
+terraform init
+terraform apply -var="project_id=YOUR_PROJECT_ID" -var="region=REGION" -var="zone=ZONE" -var="bucket=BUCKET"
