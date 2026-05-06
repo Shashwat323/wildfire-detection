@@ -55,6 +55,10 @@ def encode_image(image: np.ndarray) -> str:
     base64_string = base64.b64encode(buffer).decode('utf-8')
     return base64_string
 
+@app.get('/api/health')
+async def public():
+    return {"message": "The wildfire-detection API is alive."}
+
 @app.post("/api/predict", response_model=PredictionResponse)
 def predict(request: InferenceRequest):
     image = decode_image(request.image)
