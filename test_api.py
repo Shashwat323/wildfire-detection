@@ -21,7 +21,7 @@ def test_api():
         "uuid": "e4b2c1d0-8d2e-11eb-8dcd-0242ac130003",
         "image": encoded_string
     }
-
+    print(payload)
     print("--- Testing /api/predict ---")
     try:
         response = requests.post(url_predict, json=payload)

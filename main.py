@@ -4,10 +4,10 @@ import uvicorn
 import cv2
 import numpy as np
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from ultralytics import YOLO
 
-api = FastAPI(title="Wildfire Detection API")
+app = FastAPI(title="Wildfire Detection API")
 
 MODEL_PATH = "fire-models/fire_m.pt"
 model = YOLO(MODEL_PATH)
@@ -55,7 +55,7 @@ def encode_image(image: np.ndarray) -> str:
     base64_string = base64.b64encode(buffer).decode('utf-8')
     return base64_string
 
-@api.post("/api/predict", response_model=PredictionResponse)
+@app.post("/api/predict", response_model=PredictionResponse)
 def predict(request: InferenceRequest):
     image = decode_image(request.image)
     results = model.predict(image, device='cpu')
@@ -88,7 +88,7 @@ def predict(request: InferenceRequest):
         speed_postprocess_ms=result.speed['postprocess']
     )
 
-@api.post("/api/annotate", response_model=AnnotationResponse)
+@app.post("/api/annotate", response_model=AnnotationResponse)
 def annotate(request: InferenceRequest):
     image = decode_image(request.image)
     results = model.predict(image, device='cpu')
@@ -104,4 +104,4 @@ def annotate(request: InferenceRequest):
     )
 
 if __name__ == "__main__":
-    uvicorn.run(api, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
