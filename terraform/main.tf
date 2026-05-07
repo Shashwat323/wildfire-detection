@@ -5,7 +5,6 @@ provider "google" {
 }
 
 variable "project_id" {
-  description = "The GCP project ID"
   type        = string
   default = "wildfire-detection-495521"
 }
@@ -88,7 +87,12 @@ resource "google_compute_instance" "app_server" {
     gcloud storage cp -r gs://${var.bucket}/* .
 
     docker build -t wildfire-app .
-    docker run -d --name wildfire-api -p 8000:8000 wildfire-app
+     docker run -d \
+      --name wildfire-api \
+      -p 8000:8000 \
+      --restart unless-stopped \
+      --security-opt=no-new-privileges \
+      wildfire-app
   EOT
 }
 

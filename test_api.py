@@ -2,10 +2,11 @@ import base64
 import requests
 import json
 import os
+import time
 
-def test_api():
-    url_predict = "http://127.0.0.1:8000/api/predict"
-    url_annotate = "http://127.0.0.1:8000/api/annotate"
+def test_api(path):
+    url_predict = "http://" + path + ":8000/api/predict"
+    url_annotate = "http://" + path + ":8000/api/annotate"
     
     sample_image_path = "demo-images/image0.jpeg"
     
@@ -51,4 +52,5 @@ def test_api():
         print("Could not connect to the server. Make sure main.py is running.")
 
 if __name__ == "__main__":
-    test_api()
+    path = input("External IPv4 Address: ")
+    test_api(path)

@@ -55,15 +55,17 @@ def encode_image(image: np.ndarray) -> str:
     base64_string = base64.b64encode(buffer).decode('utf-8')
     return base64_string
 
+def predict_image(imagestr: str):
+    image = decode_image(imagestr)
+    return model.predict(image, device='cpu')[0]
+
 @app.get('/api/health')
 async def public():
     return {"message": "The wildfire-detection API is alive."}
 
 @app.post("/api/predict", response_model=PredictionResponse)
 def predict(request: InferenceRequest):
-    image = decode_image(request.image)
-    results = model.predict(image, device='cpu')
-    result = results[0]
+    result = predict_image(request.image)
     
     detections = []
     boxes = []
@@ -94,9 +96,7 @@ def predict(request: InferenceRequest):
 
 @app.post("/api/annotate", response_model=AnnotationResponse)
 def annotate(request: InferenceRequest):
-    image = decode_image(request.image)
-    results = model.predict(image, device='cpu')
-    result = results[0]
+    result = predict_image(request.image)
     
     annotated_frame = result.plot()
     
