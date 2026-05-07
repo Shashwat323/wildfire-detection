@@ -1,0 +1,27 @@
+What key changed need to be made to configure a docker contrainer to execute as a non-root user 
+
+Key Enhancements:
+ 1. User Creation: Added groupadd and useradd to create a dedicated system user (appuser) with no login shell.
+ 2. Secure Ownership: Used the --chown=appuser:appuser flag in the COPY instructions to ensure the application source code and models are owned by the non-root user.
+ 3. Principle of Least Privilege: Added the USER appuser instruction before the EXPOSE and CMD commands, ensuring the application process runs with restricted permissions.
+
+
+How to make Terraform files more secure and robust
+
+While not strictly required for the app to run, you should consider updating the metadata_startup_script to further harden the deployment:
+
+   1. Add Security Flags: Since the container is now non-root, you can prevent it from gaining new privileges (like via setuid binaries) by adding --security-opt=no-new-privileges to the
+      docker run command.
+   2. Environment Variables: Ensure any sensitive configuration is passed securely.
+
+  Suggested change to terraform/main.tf:
+
+  I recommend updating the docker run line in your metadata_startup_script to include hardening flags:
+
+   1 # Inside google_compute_instance.app_server metadata_startup_script
+   2 docker run -d \
+   3   --name NAME \
+   4   -p S_PORT:D_PORT \
+   5   --restart unless-stopped \
+   6   --security-opt=no-new-privileges \
+   7   APP_IMAGE
