@@ -6,7 +6,7 @@ provider "google" {
 
 variable "project_id" {
   type        = string
-  default = "wildfire-detection-495521"
+  default     = "wildfire-detection-495521"
 }
 
 variable "region" {
@@ -19,9 +19,9 @@ variable "zone" {
   default = "us-central1-a"
 }
 
-variable "bucket" {
+variable "machine_type" {
   type    = string
-  default = "wildfire-detection"
+  default = "e2-custom-4-8192" # 4 vCPUs, 8GB RAM
 }
 
 resource "google_service_account" "vm_sa" {
@@ -29,40 +29,28 @@ resource "google_service_account" "vm_sa" {
   display_name = "Service Account for Wildfire VM"
 }
 
-resource "google_project_iam_member" "bucket_reader" {
+resource "google_project_iam_member" "sa_viewer" {
   project = var.project_id
   role    = "roles/storage.objectViewer"
   member  = "serviceAccount:${google_service_account.vm_sa.email}"
 }
 
-resource "google_compute_firewall" "allow_http_8000" {
-  name    = "allow-http-8000"
-  network = "default"
-
-  allow {
-    protocol = "tcp"
-    ports    = ["8000"]
-  }
-
-  source_ranges = ["0.0.0.0/0"]
-  target_tags   = ["wildfire-app"]
-}
-
-resource "google_compute_instance" "app_server" {
-  name         = "wildfire-app-server"
-  machine_type = "e2-highcpu-8"
+resource "google_compute_instance" "k8s_master" {
+  name         = "k8s-master"
+  machine_type = var.machine_type
   zone         = var.zone
-  tags         = ["wildfire-app"]
+  tags         = ["k8s-node", "k8s-master"]
 
   boot_disk {
     initialize_params {
       image = "debian-cloud/debian-11"
+      size  = 30
     }
   }
 
   network_interface {
     network = "default"
-    access_config {} 
+    access_config {}
   }
 
   service_account {
@@ -70,32 +58,86 @@ resource "google_compute_instance" "app_server" {
     scopes = ["cloud-platform"]
   }
 
-  metadata_startup_script = <<-EOT
-    set -ex
-
-    while fuser /var/lib/dpkg/lock >/dev/null 2>&1 ; do
-      echo "Waiting for package manager to finish..."
-      sleep 5
-    done
-
-    apt-get update
-    apt-get install -y docker.io
-
-    mkdir -p /app
-    cd /app
-
-    gcloud storage cp -r gs://${var.bucket}/* .
-
-    docker build -t wildfire-app .
-     docker run -d \
-      --name wildfire-api \
-      -p 8000:8000 \
-      --restart unless-stopped \
-      --security-opt=no-new-privileges \
-      wildfire-app
-  EOT
+  metadata_startup_script = file("${path.module}/scripts/k8s-setup.sh")
 }
 
-output "external_ip" {
-  value = google_compute_instance.app_server.network_interface[0].access_config[0].nat_ip
+resource "google_compute_instance" "k8s_worker" {
+  count        = 2
+  name         = "k8s-worker-${count.index}"
+  machine_type = var.machine_type
+  zone         = var.zone
+  tags         = ["k8s-node", "k8s-worker"]
+
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-11"
+      size  = 30
+    }
+  }
+
+  network_interface {
+    network = "default"
+    access_config {}
+  }
+
+  service_account {
+    email  = google_service_account.vm_sa.email
+    scopes = ["cloud-platform"]
+  }
+
+  metadata_startup_script = file("${path.module}/scripts/k8s-setup.sh")
+}
+
+resource "google_compute_firewall" "allow_k8s_internal" {
+  name    = "allow-k8s-internal"
+  network = "default"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["0-65535"]
+  }
+  allow {
+    protocol = "udp"
+    ports    = ["0-65535"]
+  }
+  allow {
+    protocol = "icmp"
+  }
+
+  source_tags = ["k8s-node"]
+  target_tags = ["k8s-node"]
+}
+
+resource "google_compute_firewall" "allow_k8s_control_plane" {
+  name    = "allow-k8s-control-plane"
+  network = "default"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["6443", "2379-2380", "10250", "10257", "10259"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["k8s-master"]
+}
+
+resource "google_compute_firewall" "allow_app_traffic" {
+  name    = "allow-app-traffic"
+  network = "default"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80", "30080"] # Specific NodePort
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["k8s-node"]
+}
+
+output "master_ip" {
+  value = google_compute_instance.k8s_master.network_interface[0].access_config[0].nat_ip
+}
+
+output "worker_ips" {
+  value = google_compute_instance.k8s_worker[*].network_interface[0].access_config[0].nat_ip
 }

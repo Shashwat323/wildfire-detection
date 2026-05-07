@@ -25,3 +25,53 @@ While not strictly required for the app to run, you should consider updating the
    5   --restart unless-stopped \
    6   --security-opt=no-new-privileges \
    7   APP_IMAGE
+
+
+Can't access the webapp at the http://IP:30080/api/health
+
+The issue is likely that the Docker image is built only on the master node, but the Kubernetes deployment is trying
+  to run the pods on the worker nodes. Since you have imagePullPolicy: Never in your deployment.yaml, the worker
+  nodes are failing because they don't have the wildfire-app:latest image locally.
+
+  Additionally, because your cluster is using containerd as the runtime (configured in k8s-setup.sh), images built
+  with docker build must be imported into the containerd image store for Kubernetes to see them.
+
+  Recommended Fixes
+
+  1. Update deploy.sh to build and import images on all nodes
+  Modify the "Build Docker Image" section to loop through all nodes (master and workers), build the image, and then
+  import it into containerd.
+
+    1 # ... after copying files to master ...
+    2
+    3 # Loop through all nodes to build and import the image
+    4 for NODE in $ALL_NODES; do
+    5     echo "--- Building and Importing Image on $NODE ---"
+    6     # Copy files to the node (if not already there)
+    7     if [ "$NODE" != "k8s-master" ]; then
+    8         gcloud compute ssh k8s-master --zone=us-central1-a --command "tar czf - main.py requirements.txt
+      Dockerfile fire-models/" | \
+    9         gcloud compute ssh $NODE --zone=us-central1-a --command "tar xzf -"
+   10     fi
+   11     
+   12     # Build and import
+   13     gcloud compute ssh $NODE --zone=us-central1-a --command "
+   14         sudo docker build -t wildfire-app . && \
+   15         sudo docker save wildfire-app | sudo ctr -n k8s.io images import -
+   16     "
+   17 done
+   18
+   19 # Deploy Application
+   20 # ...
+
+  2. Verify Pod Status
+  Check if the pods are actually running. Since they are in a specific namespace, you must include the -n flag:
+
+   1 kubectl get pods -n wildfire-apps -o wide
+  If you see ErrImageNeverPull or ImagePullBackOff, it confirms the workers are missing the image.
+
+  3. Use the correct IP
+  Ensure you are using the External IP of a worker node (not the internal one). You can find these by running:
+
+
+Received Error:

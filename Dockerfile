@@ -1,5 +1,5 @@
 # Stage 1: Builder
-FROM python:3.10-slim as builder
+FROM python:3.10-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -15,6 +15,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Install dependencies in one layer to keep image small
+# opencv-python-headless
+# CPU-only torch index
 RUN pip install --upgrade pip && \
     pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
@@ -33,21 +36,19 @@ WORKDIR /app
 # Create a non-root user
 RUN groupadd -r appuser && useradd -r -g appuser -s /sbin/nologin appuser
 
-# Install runtime dependencies
+# Install only essential runtime dependencies
+# libgl1 and libglib2.0-0 are often needed by opencv, but headless needs fewer
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 
-# Copy application source code and set ownership
+# Copy application source code
 COPY --chown=appuser:appuser main.py .
 COPY --chown=appuser:appuser fire-models/ ./fire-models/
 
-# Ensure the appuser has access to the virtual environment (if needed)
-# and set the user
 USER appuser
 
 EXPOSE 8000

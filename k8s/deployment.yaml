@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wildfire-detection-deployment
+  namespace: wildfire-apps
+  labels:
+    app: wildfire-detection
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: wildfire-detection
+  template:
+    metadata:
+      labels:
+        app: wildfire-detection
+    spec:
+      containers:
+      - name: wildfire-app
+        image: wildfire-app:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            cpu: "1.0"
+            memory: "2Gi"
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 5

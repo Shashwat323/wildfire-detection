@@ -5,8 +5,8 @@ import os
 import time
 
 def test_api(path):
-    url_predict = "http://" + path + ":8000/api/predict"
-    url_annotate = "http://" + path + ":8000/api/annotate"
+    url_predict = "http://" + path + ":30080/api/predict"
+    url_annotate = "http://" + path + ":30080/api/annotate"
     
     sample_image_path = "demo-images/image0.jpeg"
     
@@ -41,10 +41,9 @@ def test_api(path):
             data = response.json()
             print(f"UUID: {data['uuid']}")
             print(f"Annotated image: {data['annotated_image']}")
-
-            with open("annotated_test.jpg", "wb") as f:
-                f.write(base64.b64decode(data['annotated_image']))
-            print("Saved annotated image to annotated_test.jpg")
+            #with open("annotated_test.jpg", "wb") as f:
+            #    f.write(base64.b64decode(data['annotated_image']))
+            #print("Saved annotated image to annotated_test.jpg")
         else:
             print(f"Failed with status code: {response.status_code}")
             print(response.text)
