@@ -12,9 +12,11 @@ terraform apply -var="project_id=YOUR_PROJECT_ID" -var="region=REGION" -var="zon
 
 The output will be the public IPv4 address.
 
+Navigate to the parent directory and run deploy.sh
+
 Wait a few minutes while the docker image builds and runs.
 
-In a browser navigate to http://<EXTERNAL IPv4 ADDRESS>:8000
+In a browser navigate to http://<EXTERNAL IPv4 ADDRESS>:30080
 
 Use /api/health to check is the API is online.
 METHOD: GET
@@ -60,3 +62,8 @@ JSON {​
 "uuid": UNIQUE IDENTIFIER,​
 "image":BASE64 ENCODED IMAGE​ WITH BOXES
 }
+
+To start Locust run:
+locus -f locustfile.py
+
+and input the External IPv4 Address of the worker when prompted.

@@ -1,23 +1,8 @@
+set -e
+
 # Get Infrastructure Details
 WORKER_NAMES=$(gcloud compute instances list --filter="tags.items=k8s-worker" --format="value(name)")
 ALL_NODES="k8s-master $WORKER_NAMES"
-
-# Fixes br_netfilter error)
-for NODE in $ALL_NODES; do
-    echo "Configuring $NODE..."
-    gcloud compute ssh $NODE --zone=us-central1-a --command "
-        sudo modprobe overlay && \
-        sudo modprobe br_netfilter && \
-        echo 'overlay' | sudo tee /etc/modules-load.d/k8s.conf && \
-        echo 'br_netfilter' | sudo tee -a /etc/modules-load.d/k8s.conf && \
-        cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
-net.bridge.bridge-nf-call-iptables  = 1
-net.bridge.bridge-nf-call-ip6tables = 1
-net.ipv4.ip_forward                 = 1
-EOF
-        sudo sysctl --system
-    "
-done
 
 # Initialize Master Node
 gcloud compute ssh k8s-master --zone=us-central1-a --command "sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=NumCPU"
