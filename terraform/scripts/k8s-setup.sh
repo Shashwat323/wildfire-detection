@@ -44,12 +44,3 @@ apt-mark hold kubelet kubeadm kubectl
 containerd config default | tee /etc/containerd/config.toml
 sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml
 systemctl restart containerd
-
-# Get files
-mkdir -p fire-models
-mkdir -p k8s
-gcloud storage cp gs://wildfire-detection/requirements.txt .
-gcloud storage cp gs://wildfire-detection/main.py .
-gcloud storage cp gs://wildfire-detection/Dockerfile .
-gcloud storage cp -r gs://wildfire-detection/fire-models/* fire-models/
-gcloud storage cp -r gs://wildfire-detection/k8s/* k8s/

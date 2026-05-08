@@ -1,5 +1,9 @@
 set -e
 
+sudo docker build -t wildfire-app .
+sudo docker save wildfire-app | gzip > wildfire-app.tar.gz
+gcloud storage cp wildfire-app.tar.gz gs://wildfire-detection/
+
 # Get Infrastructure Details
 WORKER_NAMES=$(gcloud compute instances list --filter="tags.items=k8s-worker" --format="value(name)")
 ALL_NODES="k8s-master $WORKER_NAMES"
@@ -22,18 +26,22 @@ for WORKER in $WORKER_NAMES; do
     gcloud compute ssh $WORKER --zone=us-central1-a --command "sudo $JOIN_CMD"
 done
 
-# Build and Import Image on Master
-echo "--- Building and Importing Image on k8s-master ---"
+# Distribute Image to Master
+echo "--- Distributing Image to master"
 gcloud compute ssh k8s-master --zone=us-central1-a --command "
-    sudo docker build -t wildfire-app . && \
-    sudo docker save wildfire-app | sudo ctr -n k8s.io images import -
+    mkdir -p k8s && \
+    gcloud sotrage cp gs://wildfire-detection/k8s/* k8s/ && \
+    gcloud storage cp gs://wildfire-detection/wildfire-app.tar.gz . && \
+    gunzip -c wildfire-app.tar.gz | sudo ctr -n k8s.io images import -
 "
 
 # Distribute Image to Worker Nodes
 for WORKER in $WORKER_NAMES; do
     echo "--- Distributing Image to $WORKER ---"
-    gcloud compute ssh k8s-master --zone=us-central1-a --command "sudo docker save wildfire-app" | \
-    gcloud compute ssh $WORKER --zone=us-central1-a --command "sudo ctr -n k8s.io images import -"
+    gcloud compute ssh $WORKER --zone=us-central1-a --command "
+        gcloud storage cp gs://wildfire-detection/wildfire-app.tar.gz . && \
+        gunzip -c wildfire-app.tar.gz | sudo ctr -n k8s.io images import -
+    "
 done
 
 # Deploy Application

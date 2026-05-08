@@ -58,7 +58,7 @@ resource "google_compute_instance" "k8s_master" {
     scopes = ["cloud-platform"]
   }
 
-  metadata_startup_script = file("${path.module}/scripts/master-k8s-setup.sh")
+  metadata_startup_script = file("${path.module}/scripts/k8s-setup.sh")
 }
 
 resource "google_compute_instance" "k8s_worker" {
@@ -85,7 +85,7 @@ resource "google_compute_instance" "k8s_worker" {
     scopes = ["cloud-platform"]
   }
 
-  metadata_startup_script = file("${path.module}/scripts/worker-k8s-setup.sh")
+  metadata_startup_script = file("${path.module}/scripts/k8s-setup.sh")
 }
 
 resource "google_compute_firewall" "allow_k8s_internal" {
