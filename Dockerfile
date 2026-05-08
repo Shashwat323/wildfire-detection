@@ -39,7 +39,6 @@ RUN groupadd -r appuser && useradd -r -g appuser -s /sbin/nologin appuser
 # Install only essential runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
-    libxcb1 \
     libgl1 \
     && rm -rf /var/lib/apt/lists/*
 

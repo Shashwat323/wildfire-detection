@@ -22,14 +22,6 @@ for WORKER in $WORKER_NAMES; do
     gcloud compute ssh $WORKER --zone=us-central1-a --command "sudo $JOIN_CMD"
 done
 
-# Copy Files From Bucket
-gcloud compute ssh k8s-master --zone=us-central1-a --command "mkdir -p fire-models && mkdir -p k8s && \
-    gcloud storage cp gs://wildfire-detection/requirements.txt . && \
-    gcloud storage cp gs://wildfire-detection/main.py . && \
-    gcloud storage cp gs://wildfire-detection/Dockerfile . && \
-    gcloud storage cp -r gs://wildfire-detection/fire-models/* fire-models/ && \
-    gcloud storage cp -r gs://wildfire-detection/k8s/* k8s/"
-
 # Build and Import Image on Master
 echo "--- Building and Importing Image on k8s-master ---"
 gcloud compute ssh k8s-master --zone=us-central1-a --command "

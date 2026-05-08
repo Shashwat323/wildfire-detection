@@ -21,7 +21,7 @@ variable "zone" {
 
 variable "machine_type" {
   type    = string
-  default = "e2-custom-4-8192" # 4 vCPUs, 8GB RAM
+  default = "e2-highcpu-8" # 4 cores, 8GB RAM
 }
 
 resource "google_service_account" "vm_sa" {
@@ -58,7 +58,7 @@ resource "google_compute_instance" "k8s_master" {
     scopes = ["cloud-platform"]
   }
 
-  metadata_startup_script = file("${path.module}/scripts/k8s-setup.sh")
+  metadata_startup_script = file("${path.module}/scripts/master-k8s-setup.sh")
 }
 
 resource "google_compute_instance" "k8s_worker" {
@@ -85,7 +85,7 @@ resource "google_compute_instance" "k8s_worker" {
     scopes = ["cloud-platform"]
   }
 
-  metadata_startup_script = file("${path.module}/scripts/k8s-setup.sh")
+  metadata_startup_script = file("${path.module}/scripts/worker-k8s-setup.sh")
 }
 
 resource "google_compute_firewall" "allow_k8s_internal" {

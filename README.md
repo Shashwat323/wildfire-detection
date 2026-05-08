@@ -8,7 +8,7 @@ Dockerfile
 
 Navigate to the terraform/ directory and run the following commands:
 terraform init
-terraform apply -var="project_id=YOUR_PROJECT_ID" -var="region=REGION" -var="zone=ZONE" -var="bucket=BUCKET"
+terraform apply -var="project_id=YOUR_PROJECT_ID" -var="region=REGION" -var="zone=ZONE" -var="bucket=BUCKET" -var="machine_type=MACHINE_TYPE"
 
 The output will be the public IPv4 address.
 
